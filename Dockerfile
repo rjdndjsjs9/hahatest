@@ -1,38 +1,40 @@
-# Menggunakan base image Linux
+# Base image dengan dukungan grafis
 FROM ubuntu:20.04
 
-# Set timezone non-interaktif
+# Set timezone
 ENV TZ=Asia/Jakarta
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Update sistem dan install dependencies
 RUN apt-get update && apt-get install -y \
-    ttyd \
-    curl \
     wget \
-    nano \
-    vim \
     unzip \
-    git \
-    openssh-server \
+    gnupg \
+    xvfb \
+    fluxbox \
+    x11vnc \
+    novnc \
+    curl \
+    google-chrome-stable \
+    dbus-x11 \
     sudo
 
-# Install code-server (VSCode di browser)
-RUN curl -fsSL https://code-server.dev/install.sh | sh
+# Tambahkan Google Chrome repository dan install Chrome
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && \
+    echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list && \
+    apt-get update && apt-get install -y google-chrome-stable
 
-# Konfigurasi direktori kerja
-WORKDIR /root
+# Install NoVNC untuk akses browser melalui web
+RUN wget https://github.com/novnc/noVNC/archive/refs/heads/master.zip && \
+    unzip master.zip && \
+    mv noVNC-master /opt/novnc
 
-# Tambahkan user untuk akses root tanpa batas
-RUN echo "root:root" | chpasswd
+# Copy script startup
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
 
-# Buat direktori untuk upload/download file
-RUN mkdir /root/files
+# Expose port untuk VNC dan NoVNC
+EXPOSE 8080 5900
 
-# Expose port 8080 untuk ttyd (terminal) dan 8081 untuk code-server
-EXPOSE 8080 8081
-
-# Jalankan ttyd dan code-server secara paralel
-CMD ttyd -p 8080 bash & \
-    code-server --bind-addr 0.0.0.0:8081 --auth none --disable-telemetry --user-data-dir /root/files && \
-    tail -f /dev/null
+# Jalankan script
+CMD ["/start.sh"]
