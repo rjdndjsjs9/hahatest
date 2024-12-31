@@ -29,12 +29,10 @@ RUN echo "root:root" | chpasswd
 # Buat direktori untuk upload/download file
 RUN mkdir /root/files
 
-# Expose port 8080 untuk ttyd dan 8081 untuk code-server
+# Expose port 8080 untuk ttyd (terminal) dan 8081 untuk code-server
 EXPOSE 8080 8081
 
-# Copy script startup
-COPY start.sh /start.sh
-RUN chmod +x /start.sh
-
-# Jalankan script saat container dijalankan
-CMD ["/start.sh"]
+# Jalankan ttyd dan code-server secara paralel
+CMD ttyd -p 8080 bash & \
+    code-server --bind-addr 0.0.0.0:8081 --auth none --disable-telemetry --user-data-dir /root/files && \
+    tail -f /dev/null
